@@ -12,17 +12,16 @@ export class User extends Document {
   @Prop({ required: true })
   username: string;
 
-  @Prop({ default: 'user' })
+  @Prop({ default: 'user', enum: ['user', 'owner'] })
   user_type: string;
 
   @Prop({ required: true })
   phone: string;
 
-  @Prop({ })
+  @Prop({})
   profile_image?: string;
-  
-  @Prop({ required: true ,default:Date.now()})
-  created_at: Date;
+
+
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

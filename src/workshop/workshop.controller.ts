@@ -31,7 +31,7 @@ export class WorkshopController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<workShopDto>) {
+  update(@Param('id') id: string, @Body() dto: workShopDto) {
     return this.service.update(id, dto);
   }
 

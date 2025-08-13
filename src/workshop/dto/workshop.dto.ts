@@ -2,6 +2,7 @@ import { IsDate, IsString } from "class-validator";
 
 
 export class workShopDto {
+  @IsString()
   user_id: string;
 
   @IsString()
@@ -16,6 +17,5 @@ export class workShopDto {
   working_hours: string;
   @IsString()
   profile_image: String;
-  @IsDate()
-  created_at: Date;
+ 
 }

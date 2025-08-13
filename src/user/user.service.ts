@@ -3,7 +3,7 @@ import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/co
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from './user.schema';
 import { Model } from 'mongoose';
-import { UserDto, UserResponse } from './dto/user.dto';
+import { UserDto } from './dto/user.dto';
 
 @Injectable()
 export class UserService {
@@ -14,7 +14,7 @@ export class UserService {
     return createdUser.save();
   }
 
-  async findAll(): Promise<UserResponse[]> {
+  async findAll(): Promise<UserDto[]> {
     return this.userModel.find().exec();
   }
 
