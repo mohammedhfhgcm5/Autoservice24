@@ -1,7 +1,7 @@
 // src/workshop/workshop.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { workShop } from './workshop.schema';
 import { workShopDto } from './dto/workshop.dto';
 
@@ -9,8 +9,11 @@ import { workShopDto } from './dto/workshop.dto';
 export class WorkshopService {
   constructor(@InjectModel(workShop.name) private model: Model<workShop>) {}
 
-  create(dto: workShopDto) {
-    const created = new this.model(dto);
+  create(dto: workShopDto, userId: string) {
+    const created = new this.model({
+      ...dto,
+      user_id: new Types.ObjectId(userId),
+    });
     return created.save();
   }
 
