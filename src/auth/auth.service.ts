@@ -2,7 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthDto } from './dto/auth.dto';
+import { AuthDto, EditUserDto, ForgotPasswordDto } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
@@ -37,16 +37,15 @@ export class AuthService {
 
   async signUp(signupBody: UserDto) {
     const { password, ...rest } = signupBody;
-    const salt = bcrypt.genSaltSync(12);
+    const salt = bcrypt.genSaltSync(16);
     const hashPassword = bcrypt.hashSync(password, salt);
     const newUser = await this.userservice.create({
       password: hashPassword,
       email: rest.email,
       username: rest.username,
-      phone:rest.phone,
-      profile_image:rest.profile_image,
-      user_type:rest.user_type
-     
+      phone: rest.phone,
+      profile_image: rest.profile_image,
+      user_type: rest.user_type,
     });
 
     return {
@@ -55,4 +54,31 @@ export class AuthService {
       user: newUser,
     };
   }
+
+  async editDetails(userId: string, body: EditUserDto) {
+    const updatedUser = await this.userservice.update(userId, body);
+    return {
+      status: true,
+      message: 'User updated successfully',
+      user: updatedUser,
+    };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.userservice.getOneUserByEmail(dto.email);
+    if (!user) throw new UnauthorizedException('User not found');
+
+    const salt = bcrypt.genSaltSync(16);
+    const newHashedPassword = bcrypt.hashSync(dto.newPassword, salt);
+
+    await this.userservice.update(user.id, { password: newHashedPassword });
+
+    return {
+      status: true,
+      message: 'Password updated successfully',
+    };
+  }
 }
+
+
+

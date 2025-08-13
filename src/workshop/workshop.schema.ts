@@ -24,8 +24,7 @@ export class workShop extends Document {
   @Prop({ required: true })
   profile_image: String;
 
-  @Prop({ required: true })
-  created_at: Date;
+
 }
 
 export const workShopSchema = SchemaFactory.createForClass(workShop);

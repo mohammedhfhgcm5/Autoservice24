@@ -22,7 +22,7 @@ export class WorkshopService {
     return this.model.findById(id).exec();
   }
 
-  async update(id: string, dto: Partial<workShopDto>) {
+  async update(id: string, dto: workShopDto) {
     const updated = await this.model
       .findByIdAndUpdate(id, dto, { new: true })
       .exec();
