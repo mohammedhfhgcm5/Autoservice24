@@ -12,7 +12,7 @@ export class workShop extends Document {
   @Prop({ required: true })
   description: string;
 
-  @Prop({ default: 'user' })
+  @Prop({ required: true })
   location_x: string;
 
   @Prop({ required: true })
@@ -21,10 +21,8 @@ export class workShop extends Document {
   @Prop({ required: true })
   working_hours: string;
 
-  @Prop({ required: true })
-  profile_image: String;
-
-
+  @Prop()
+  profile_image?: String;
 }
 
 export const workShopSchema = SchemaFactory.createForClass(workShop);

@@ -7,17 +7,22 @@ import {
   Delete,
   Param,
   Body,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { WorkshopService } from './workshop.service';
 import { workShopDto } from './dto/workshop.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('workshop')
 export class WorkshopController {
   constructor(private readonly service: WorkshopService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: workShopDto) {
-    return this.service.create(dto);
+  create(@Body() dto: workShopDto, @Req() req) {
+    const userId = req.user._id; 
+    return this.service.create(dto, userId);
   }
 
   @Get()

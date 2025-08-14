@@ -1,5 +1,4 @@
-import { IsDate, IsString } from "class-validator";
-
+import { IsDate, IsString } from 'class-validator';
 
 export class workShopDto {
   @IsString()
@@ -16,6 +15,5 @@ export class workShopDto {
   @IsString()
   working_hours: string;
   @IsString()
-  profile_image: String;
- 
+  profile_image?: String;
 }
