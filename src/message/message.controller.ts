@@ -15,16 +15,12 @@ import { UpdateMessageDto } from './dto/update-message.dto';
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
-  @Post()
+  @Post('sendmessage')
   create(@Body() dto: CreateMessageDto) {
     return this.messagesService.create(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.messagesService.findAll();
-  }
-
+ 
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.messagesService.findOne(id);

@@ -6,23 +6,28 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/chatdto';
 import { UpdateChatDto } from './dto/update-chat.dto';
+import { currentUser } from 'src/auth/decorator/current.user.decorator';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('chats')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
-  @Post()
+  @Post('createchat')
   create(@Body() dto: CreateChatDto) {
     return this.chatService.create(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.chatService.findAll();
+  @Get('getallchat')
+  @UseGuards(JwtAuthGuard)
+  findAll(@currentUser() user) {
+   const userId = user._id;
+    return this.chatService.findAll(userId);
   }
 
   @Get(':id')
