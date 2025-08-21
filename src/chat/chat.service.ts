@@ -14,8 +14,12 @@ export class ChatService {
     return created.save();
   }
 
-  async findAll() {
-    return this.chatModel.find().exec();
+  async findAll(userId: string) {
+    return this.chatModel
+      .find({
+        $or: [{ user1Id: userId }, { user2Id: userId }],
+      })
+      .exec();
   }
 
   async findOne(id: string) {

@@ -13,19 +13,21 @@ import {
 import { WorkshopService } from './workshop.service';
 import { workShopDto } from './dto/workshop.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { currentUser } from 'src/auth/decorator/current.user.decorator';
 
 @Controller('workshop')
 export class WorkshopController {
   constructor(private readonly service: WorkshopService) {}
 
   @UseGuards(JwtAuthGuard)
-  @Post()
-  create(@Body() dto: workShopDto, @Req() req) {
-    const userId = req.user._id; 
+  @Post('createworkshop')
+  create(@Body() dto: workShopDto, @currentUser() user) {
+  
+    const userId = user._id; 
     return this.service.create(dto, userId);
   }
 
-  @Get()
+  @Get('getallworkshop')
   findAll() {
     return this.service.findAll();
   }
