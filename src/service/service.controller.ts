@@ -17,14 +17,22 @@ import { ServiceType } from './service.schema';
 export class ServiceController {
   constructor(private readonly serviceService: ServiceService) {}
 
-  @Post()
+  @Post('createservice')
   create(@Body() dto: CreateServiceDto) {
     return this.serviceService.create(dto);
   }
 
-  @Get()
+  @Get('findallservice')
   findAll(@Query('serviceType') serviceType?: ServiceType) {
     return this.serviceService.findAll(serviceType);
+  }
+
+  @Get('search')
+  search(
+    @Query('q') query: string,
+    @Query('serviceType') serviceType?: ServiceType,
+  ) {
+    return this.serviceService.search(query, serviceType);
   }
 
   @Get('types')
