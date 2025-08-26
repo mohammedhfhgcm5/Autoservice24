@@ -9,9 +9,10 @@ import { UserDto } from './dto/user.dto';
 export class UserService {
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
-  async create(userDto: UserDto): Promise<User> {
+  async create(userDto: UserDto) {
     const createdUser = new this.userModel(userDto);
-    return createdUser.save();
+
+    return await createdUser.save();
   }
 
   async findAll(): Promise<UserDto[]> {
@@ -37,10 +38,16 @@ export class UserService {
     if (!result) throw new NotFoundException('User not found');
   }
 
-
-  async getOneUserByEmail (email:string){
+  async getOneUserByEmail(email: string) {
     const user = await this.userModel.findOne({ email: email }).exec();
     if (user) return user;
     else throw new UnauthorizedException('Invalid email or password');
+  }
+
+  async findByProvider(
+    provider: string,
+    providerId: string,
+  ): Promise<User | null> {
+    return this.userModel.findOne({ provider, providerId }).exec();
   }
 }

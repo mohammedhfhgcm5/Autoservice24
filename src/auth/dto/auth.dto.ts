@@ -12,9 +12,9 @@ export class AuthDto {
 export class PayloadDto {
   @IsString()
   @IsEmail()
-  email: string;
+  email?: string;
   @IsString()
-  _id: string;
+  _id: unknown;
   @IsString()
   username: string;
   @IsString()
