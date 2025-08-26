@@ -3,9 +3,9 @@ import {  IsEmail, IsIn, IsString } from 'class-validator';
 export class UserDto {
   @IsString()
   @IsEmail()
-  email: string;
+  email?: string;
   @IsString()
-  password: string;
+  password?: string;
   @IsString()
   username: string;
   @IsString()
@@ -13,9 +13,16 @@ export class UserDto {
   
   user_type: string;
   @IsString()
-  phone: string;
+  phone?: string;
   @IsString()
   profile_image?: string;
+ 
+    @IsString()
+    @IsIn( ['local', 'google', 'facebook', 'apple'] )
+    provider: string;
+  
+    @IsString() // مثال: sub من Google أو id من Facebook
+    providerId?: string;
 }
 
 
