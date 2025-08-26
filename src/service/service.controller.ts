@@ -7,7 +7,12 @@ import {
   Delete,
   Put,
   Query,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { ServiceService } from './service.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
@@ -53,5 +58,36 @@ export class ServiceController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.serviceService.remove(id);
+  }
+
+  // ✅ Upload multiple images for a service
+  @Post(':id/upload-images')
+  @UseInterceptors(
+    FilesInterceptor('images', 5, {
+      storage: diskStorage({
+        destination: './uploads/services',
+        filename: (req, file, callback) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+          return callback(new Error('Only image files are allowed!'), false);
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  async uploadImages(
+    @Param('id') id: string,
+    @UploadedFiles() files: Array<Express.Multer.File>, // ✅ correct typing
+  ) {
+    const imagePaths = files.map(
+      (file) => `/uploads/services/${file.filename}`,
+    );
+    return this.serviceService.addImages(id, imagePaths);
   }
 }

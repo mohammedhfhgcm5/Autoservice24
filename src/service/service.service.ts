@@ -17,13 +17,11 @@ export class ServiceService {
     return newService.save();
   }
 
-  // Optionally filter by service_type
   async findAll(serviceType?: ServiceType): Promise<Service[]> {
     const filter = serviceType ? { service_type: serviceType } : {};
     return this.serviceModel.find(filter).populate('workshop_id').lean().exec();
   }
 
-  // 🔎 Search by title/description with optional serviceType filter
   async search(query: string, serviceType?: ServiceType): Promise<Service[]> {
     const filter: any = {};
 
@@ -65,7 +63,16 @@ export class ServiceService {
     return { success: true };
   }
 
-  // Return all valid service types
+  async addImages(id: string, images: string[]): Promise<Service> {
+    const updated = await this.serviceModel.findByIdAndUpdate(
+      id,
+      { $push: { images: { $each: images } } },
+      { new: true },
+    );
+    if (!updated) throw new NotFoundException('Service not found');
+    return updated;
+  }
+
   getServiceTypes(): string[] {
     return Object.values(ServiceType);
   }

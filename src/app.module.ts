@@ -9,14 +9,24 @@ import { ServiceModule } from './service/service.module';
 import { SavedServiceModule } from './saved-service/saved-service.module';
 import { ChatModule } from './chat/chat.module';
 import { MessagesModule } from './message/message.module';
-
+import { join } from 'path';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
+    // 👇 Enables static serving for uploaded files
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads', // URL prefix
+    }),
+
+    // MongoDB connection
+    MongooseModule.forRoot('mongodb://localhost/auto-service-24'),
+
+    // App modules
     UserModule,
     WorkshopModule,
     AuthModule,
-    MongooseModule.forRoot('mongodb://localhost/auto-service-24'),
     ServiceModule,
     SavedServiceModule,
     ChatModule,
