@@ -24,18 +24,13 @@ export class ServiceService {
 
   async search(query: string, serviceType?: ServiceType): Promise<Service[]> {
     const filter: any = {};
-
-    if (serviceType) {
-      filter.service_type = serviceType;
-    }
-
+    if (serviceType) filter.service_type = serviceType;
     if (query) {
       filter.$or = [
         { title: { $regex: query, $options: 'i' } },
         { description: { $regex: query, $options: 'i' } },
       ];
     }
-
     return this.serviceModel.find(filter).populate('workshop_id').lean().exec();
   }
 
