@@ -5,10 +5,15 @@ import {
   Param,
   Post,
   Put,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDto, EditUserDto, ForgotPasswordDto, PayloadDto } from './dto/auth.dto';
 import { UserDto } from 'src/user/dto/user.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('auth')
 export class AuthController {
@@ -20,13 +25,64 @@ export class AuthController {
   }
 
   @Post('signup') // Now: POST /auth/signup
-  signup(@Body() signupBody: UserDto) {
-    return this.authService.signUp(signupBody);
+  @UseInterceptors(
+    FilesInterceptor('images', 5, {
+      storage: diskStorage({
+        destination: './uploads/users',
+        filename: (req, file, callback) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+          return callback(new Error('Only image files are allowed!'), false);
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  signup(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() signupBody: UserDto,
+  ) {
+    const imagePath = file ? `/uploads/users/${file.filename}` : undefined;
+
+    return this.authService.signUp({ ...signupBody, profile_image: imagePath });
   }
 
   @Put('edit/:id')
-  editDetails(@Param('id') id: string, @Body() body: EditUserDto) {
-    return this.authService.editDetails(id, body);
+  @UseInterceptors(
+    FilesInterceptor('images', 5, {
+      storage: diskStorage({
+        destination: './uploads/users',
+        filename: (req, file, callback) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+          return callback(new Error('Only image files are allowed!'), false);
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  editDetails(
+    @Param('id') id: string,
+    @Body() body: EditUserDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const imagePath = file ? `/uploads/users/${file.filename}` : undefined;
+    return this.authService.editDetails(id, {
+      ...body,
+      profile_image: imagePath,
+    });
   }
 
   @Post('forgot-password')
@@ -52,7 +108,7 @@ export class AuthController {
   ) {
     const { provider, Token, usertype } = signUpbody;
 
-    let userInfo:PayloadDto;
+    let userInfo: PayloadDto;
 
     switch (provider) {
       case 'google':
