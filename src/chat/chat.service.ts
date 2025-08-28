@@ -8,8 +8,22 @@ import { UpdateChatDto } from './dto/update-chat.dto';
 @Injectable()
 export class ChatService {
   constructor(@InjectModel(Chat.name) private chatModel: Model<ChatDocument>) {}
-
   async create(dto: CreateChatDto) {
+    const { user1Id, user2Id } = dto;
+
+    // Check if a chat already exists between these two users
+    let existingChat = await this.chatModel.findOne({
+      $or: [
+        { user1Id, user2Id },
+        { user1Id: user2Id, user2Id: user1Id }, // reverse order
+      ],
+    });
+
+    if (existingChat) {
+      return existingChat; // return existing chat instead of creating a new one
+    }
+
+    // Otherwise, create new chat
     const created = new this.chatModel(dto);
     return created.save();
   }
