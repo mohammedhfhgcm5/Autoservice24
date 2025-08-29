@@ -17,7 +17,7 @@ export class AuthService {
   constructor(
     private readonly userservice: UserService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async logIn(authBody: AuthDto) {
     const user = await this.userservice.getOneUserByEmail(authBody.email);
@@ -34,6 +34,8 @@ export class AuthService {
       _id: user._id,
       username: user.username,
       user_type: user.user_type,
+      phone: user.phone,              // أضف هذا السطر ✅
+      profile_image: user.profile_image
     };
 
     return {
@@ -184,6 +186,8 @@ export class AuthService {
       _id: user._id,
       username: user.username,
       user_type: user.user_type,
+      phone: user.phone,              // أضف هذا السطر ✅
+      profile_image: user.profile_image
     };
   }
 
