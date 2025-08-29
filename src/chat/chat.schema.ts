@@ -6,10 +6,10 @@ export type ChatDocument = Chat & Document;
 @Schema({ timestamps: true })
 export class Chat {
   @Prop({ required: true })
-  user1Id: number;
+  user1Id: string;
 
   @Prop({ required: true })
-  user2Id: number;
+  user2Id: string;
 }
 
 export const ChatSchema = SchemaFactory.createForClass(Chat);

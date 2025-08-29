@@ -3,8 +3,8 @@ import { IsInt, IsOptional, IsString } from 'class-validator';
 
 export class CreateChatDto {
   @IsInt()
-  user1Id: number;
+  user1Id: string;
 
   @IsInt()
-  user2Id: number;
+  user2Id: string;
 }
