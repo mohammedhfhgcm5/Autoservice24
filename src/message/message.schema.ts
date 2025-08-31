@@ -6,10 +6,10 @@ export type MessageDocument = Message & Document;
 @Schema({ timestamps: true })
 export class Message {
   @Prop({ required: true })
-  senderId: number;
+  senderId: string;
 
   @Prop({ required: true })
-  receiverId: number;
+  receiverId: string;
 
   @Prop({ type: Types.ObjectId, ref: 'chat', required: true })
   chatId: Types.ObjectId;

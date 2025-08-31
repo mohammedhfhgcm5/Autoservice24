@@ -45,21 +45,38 @@ export class MessagesController {
     @Body() dto: CreateMessageDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const imagePath = file ? `/uploads/messages/${file.filename}` : undefined;
+    try {
+      const imagePath = file ? `/uploads/messages/${file.filename}` : undefined;
 
+      // إنشاء الرسالة
+      const message = await this.messagesService.create({ ...dto, image: imagePath});
 
-
-
-
-     const message = await this.messagesService.create({ ...dto, image :imagePath});
-
-
+      // إرسال للـ WebSocket server (اختياري - لا يؤثر على الـ response)
       try {
         await axios.post('http://localhost:3005/api/broadcast', message);
         console.log('📡 Message broadcasted via HTTP');
       } catch (error) {
         console.error('📛 Failed to send message to WebSocket server:', error);
+        // لا نرمي error هنا لأن الرسالة تم حفظها بنجاح
       }
+
+      // إرجاع الرسالة المُنشأة (هذا مهم للـ Flutter app)
+      return {
+        success: true,
+        data: message,
+        message: 'Message sent successfully'
+      };
+
+    } catch (error) {
+      console.error('Error creating message:', error);
+      
+      // إرجاع خطأ واضح
+      return {
+        success: false,
+        message: error.message || 'Failed to send message',
+        error: error
+      };
+    }
   }
 
   @Get(':id')
@@ -76,6 +93,7 @@ export class MessagesController {
   remove(@Param('id') id: string) {
     return this.messagesService.remove(id);
   }
+
   @Get('chat/:chatId')
   findByChatId(@Param('chatId') chatId: string) {
     return this.messagesService.findByChatId(chatId);
