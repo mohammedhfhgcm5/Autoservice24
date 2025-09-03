@@ -11,7 +11,7 @@ import {
 import { AuthService } from './auth.service';
 import { AuthDto, EditUserDto, ForgotPasswordDto, PayloadDto } from './dto/auth.dto';
 import { UserDto } from 'src/user/dto/user.dto';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
@@ -24,9 +24,9 @@ export class AuthController {
     return this.authService.logIn(authBody);
   }
 
-  @Post('signup') // Now: POST /auth/signup
+  @Post('signup')
   @UseInterceptors(
-    FilesInterceptor('images', 5, {
+    FileInterceptor('image', {
       storage: diskStorage({
         destination: './uploads/users',
         filename: (req, file, callback) => {
@@ -44,18 +44,24 @@ export class AuthController {
       },
     }),
   )
-  signup(
+  async signup(
     @UploadedFile() file: Express.Multer.File,
     @Body() signupBody: UserDto,
   ) {
+    // image path saved in DB
     const imagePath = file ? `/uploads/users/${file.filename}` : undefined;
 
-    return this.authService.signUp({ ...signupBody, profile_image: imagePath });
+    console.log('Uploaded file:', file); // check file info
+
+    return this.authService.signUp({
+      ...signupBody,
+      profile_image: imagePath,
+    });
   }
 
   @Put('edit/:id')
   @UseInterceptors(
-    FilesInterceptor('images', 5, {
+    FilesInterceptor('image', 5, {
       storage: diskStorage({
         destination: './uploads/users',
         filename: (req, file, callback) => {
