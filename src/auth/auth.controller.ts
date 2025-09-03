@@ -37,7 +37,7 @@ export class AuthController {
         },
       }),
       fileFilter: (req, file, callback) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+       if (!file.mimetype.match(/^image\//)) {
           return callback(new Error('Only image files are allowed!'), false);
         }
         callback(null, true);
@@ -72,7 +72,7 @@ export class AuthController {
         },
       }),
       fileFilter: (req, file, callback) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+       if (!file.mimetype.match(/^image\//)) {
           return callback(new Error('Only image files are allowed!'), false);
         }
         callback(null, true);
