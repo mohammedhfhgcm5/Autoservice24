@@ -26,7 +26,7 @@ export class AuthController {
 
   @Post('signup')
   @UseInterceptors(
-    FileInterceptor('image', {
+    FileInterceptor('profileImage', {
       storage: diskStorage({
         destination: './uploads/users',
         filename: (req, file, callback) => {
@@ -60,8 +60,8 @@ export class AuthController {
   }
 
   @Put('edit/:id')
-  @UseInterceptors(
-    FilesInterceptor('image', 5, {
+ @UseInterceptors(
+    FileInterceptor('profileImage', {
       storage: diskStorage({
         destination: './uploads/users',
         filename: (req, file, callback) => {
@@ -72,7 +72,7 @@ export class AuthController {
         },
       }),
       fileFilter: (req, file, callback) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
           return callback(new Error('Only image files are allowed!'), false);
         }
         callback(null, true);
