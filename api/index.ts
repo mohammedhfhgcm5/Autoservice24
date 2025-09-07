@@ -1,8 +1,8 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../dist/app.module';
-import { ExpressAdapter } from '@nestjs/platform-express';
+import { AppModule } from '../src/app.module'; // <-- هنا استورد من srcimport { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { ExpressAdapter } from '@nestjs/platform-express';
 
 const server = express();
 
