@@ -12,7 +12,7 @@ import {
 import { MessagesService } from './message.service';
 import { CreateMessageDto } from './dto/msgdto';
 import { UpdateMessageDto } from './dto/update-message.dto';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import axios from 'axios';
@@ -21,10 +21,9 @@ import axios from 'axios';
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
-
-
-  //if (!file.mimetype.match(/\/(jpg|jpeg|png)$/))
   @Post('sendmessage')
+
+
     @UseInterceptors(
       FileInterceptor('image', {
         storage: diskStorage({
@@ -43,7 +42,14 @@ export class MessagesController {
           callback(null, true);
         },
       }),
-    )
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+          return callback(new Error('Only image files are allowed!'), false);
+        }
+        callback(null, true);
+      },
+    }),
+  )
   async create(
     @Body() dto: CreateMessageDto,
     @UploadedFile() file: Express.Multer.File,

@@ -36,7 +36,7 @@ export class ServiceController {
         },
       }),
       fileFilter: (req, file, callback) => {
-       if (!file.mimetype.match(/^image\//)) {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
           return callback(new Error('Only image files are allowed!'), false);
         }
         callback(null, true);
@@ -100,7 +100,7 @@ export class ServiceController {
         },
       }),
       fileFilter: (req, file, callback) => {
-        if (!file.mimetype.match(/^image\//)) {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
           return callback(new Error('Only image files are allowed!'), false);
         }
         callback(null, true);
