@@ -12,7 +12,7 @@ import {
 import { MessagesService } from './message.service';
 import { CreateMessageDto } from './dto/msgdto';
 import { UpdateMessageDto } from './dto/update-message.dto';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-express'; // ✅ FileInterceptor مش FilesInterceptor
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import axios from 'axios';
@@ -22,29 +22,23 @@ export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
   @Post('sendmessage')
-
-
-    @UseInterceptors(
-      FileInterceptor('image', {
-        storage: diskStorage({
-          destination: './uploads/messages',
-          filename: (req, file, callback) => {
-            const uniqueSuffix =
-              Date.now() + '-' + Math.round(Math.random() * 1e9);
-            const ext = extname(file.originalname);
-            callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-          },
-        }),
-        fileFilter: (req, file, callback) => {
-          if (!file.mimetype.match(/^image\//)) {
-            return callback(new Error('Only image files are allowed!'), false);
-          }
-          callback(null, true);
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/messages',
+        filename: (req, file, callback) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
         },
       }),
       fileFilter: (req, file, callback) => {
         if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
-          return callback(new Error('Only image files are allowed!'), false);
+          return callback(
+            new Error('Only JPG/PNG image files are allowed!'),
+            false,
+          );
         }
         callback(null, true);
       },
@@ -58,32 +52,30 @@ export class MessagesController {
       const imagePath = file ? `/uploads/messages/${file.filename}` : undefined;
 
       // إنشاء الرسالة
-      const message = await this.messagesService.create({ ...dto, image: imagePath});
+      const message = await this.messagesService.create({
+        ...dto,
+        image: imagePath,
+      });
 
-      // إرسال للـ WebSocket server (اختياري - لا يؤثر على الـ response)
+      // إرسال للـ WebSocket server (اختياري)
       try {
         await axios.post('http://localhost:3005/api/broadcast', message);
         console.log('📡 Message broadcasted via HTTP');
       } catch (error) {
         console.error('📛 Failed to send message to WebSocket server:', error);
-        // لا نرمي error هنا لأن الرسالة تم حفظها بنجاح
       }
 
-      // إرجاع الرسالة المُنشأة (هذا مهم للـ Flutter app)
       return {
         success: true,
         data: message,
-        message: 'Message sent successfully'
+        message: 'Message sent successfully',
       };
-
     } catch (error) {
       console.error('Error creating message:', error);
-      
-      // إرجاع خطأ واضح
       return {
         success: false,
         message: error.message || 'Failed to send message',
-        error: error
+        error: error,
       };
     }
   }
