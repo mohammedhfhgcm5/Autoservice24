@@ -9,6 +9,7 @@ import {
   Body,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { WorkshopService } from './workshop.service';
 import { workShopDto } from './dto/workshop.dto';
@@ -31,6 +32,24 @@ export class WorkshopController {
   findAll() {
     return this.service.findAll();
   }
+  @Get('nearby-workshops')
+    async getNearbyWorkshops(
+      @Query('type') type: string, // نوع الخدمة (مثلاً oilchange)
+      @Query('lng') lng: string, // خط الطول
+      @Query('lat') lat: string, // خط العرض
+      @Query('radius') radius?: string, // نصف قطر الدائرة (متر)
+    ) {
+      const lngNum = parseFloat(lng);
+      const latNum = parseFloat(lat);
+      const maxDistance = radius ? parseInt(radius) : 5000; // القيمة الافتراضية 5 كم
+  
+      return this.service.getNearbyWorkshopsByServiceType(
+        type,
+        lngNum,
+        latNum,
+        maxDistance,
+      );
+    }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
