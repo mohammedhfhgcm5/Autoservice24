@@ -71,6 +71,7 @@ export class ServiceController {
     return this.serviceService.getServiceTypes();
   }
 
+  
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.serviceService.findOne(id);

@@ -4,12 +4,14 @@ import { Model } from 'mongoose';
 import { Service, ServiceDocument, ServiceType } from './service.schema';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
+import { workShop } from 'src/workshop/workshop.schema';
 
 @Injectable()
 export class ServiceService {
   constructor(
     @InjectModel(Service.name)
     private readonly serviceModel: Model<ServiceDocument>,
+    @InjectModel(workShop.name) private workshopModel: Model<workShop>,
   ) {}
 
   async create(dto: CreateServiceDto): Promise<Service> {
@@ -71,4 +73,6 @@ export class ServiceService {
   getServiceTypes(): string[] {
     return Object.values(ServiceType);
   }
+
+  
 }

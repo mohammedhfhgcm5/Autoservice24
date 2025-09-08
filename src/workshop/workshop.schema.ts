@@ -12,11 +12,21 @@ export class workShop extends Document {
   @Prop({ required: true })
   description: string;
 
-  @Prop({ required: true })
-  location_x: string;
-
-  @Prop({ required: true })
-  location_y: string;
+  @Prop({
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true,
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      required: true,
+    },
+  })
+  location: {
+    type: string;
+    coordinates: number[];
+  };
 
   @Prop({ required: true })
   working_hours: string;
@@ -26,3 +36,5 @@ export class workShop extends Document {
 }
 
 export const workShopSchema = SchemaFactory.createForClass(workShop);
+
+workShopSchema.index({ location: '2dsphere' });

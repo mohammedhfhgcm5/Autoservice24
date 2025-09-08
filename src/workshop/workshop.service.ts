@@ -38,4 +38,41 @@ export class WorkshopService {
     if (!deleted) throw new NotFoundException('Workshop not found');
     return { message: 'Deleted successfully' };
   }
+
+  //getNearbyWorkshopsByServiceType
+  async getNearbyWorkshopsByServiceType(
+    serviceType: string,
+    lng: number,
+    lat: number,
+    radiusKm: number,
+  ) {
+    const radiusInRadians = radiusKm / 6378.1;
+
+    const workshops = await this.model.aggregate([
+      {
+        $match: {
+          location: {
+            $geoWithin: {
+              $centerSphere: [[lng, lat], radiusInRadians],
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: 'services', // collection name
+          localField: '_id',
+          foreignField: 'workshop_id',
+          as: 'services',
+        },
+      },
+      {
+        $match: {
+          'services.type': serviceType,
+        },
+      },
+    ]);
+
+    return workshops;
+  }
 }
