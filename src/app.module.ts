@@ -21,10 +21,10 @@ import { ServeStaticModule } from '@nestjs/serve-static';
     }),
 
     // MongoDB connection in local
-    // MongooseModule.forRoot('mongodb://localhost/auto-service-24'),
-    MongooseModule.forRoot(
-      'mongodb+srv://hfhgcm5_db_user:2BrnIvhBYEPPYWWk@autoservice24.bjn5m4q.mongodb.net/?retryWrites=true&w=majority&appName=autoservice24',
-    ),
+     MongooseModule.forRoot('mongodb://localhost/auto-service-24'),
+    // MongooseModule.forRoot(
+    //   'mongodb+srv://hfhgcm5_db_user:2BrnIvhBYEPPYWWk@autoservice24.bjn5m4q.mongodb.net/?retryWrites=true&w=majority&appName=autoservice24',
+    // ),
 
     // App modules
     UserModule,
