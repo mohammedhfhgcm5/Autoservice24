@@ -22,15 +22,24 @@ export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
   @Post('sendmessage')
-  @UseInterceptors(
-    FilesInterceptor('images', 5, {
-      storage: diskStorage({
-        destination: './uploads/messages',
-        filename: (req, file, callback) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+
+
+    @UseInterceptors(
+      FileInterceptor('image', {
+        storage: diskStorage({
+          destination: './uploads/messages',
+          filename: (req, file, callback) => {
+            const uniqueSuffix =
+              Date.now() + '-' + Math.round(Math.random() * 1e9);
+            const ext = extname(file.originalname);
+            callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+          },
+        }),
+        fileFilter: (req, file, callback) => {
+          if (!file.mimetype.match(/^image\//)) {
+            return callback(new Error('Only image files are allowed!'), false);
+          }
+          callback(null, true);
         },
       }),
       fileFilter: (req, file, callback) => {
