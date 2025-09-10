@@ -1,10 +1,7 @@
 const WebSocket = require('ws');
 const express = require('express');
 const bodyParser = require('body-parser');
-const https = require('https');
 const http = require('http');
-const fs = require('fs');
-const path = require('path');
 
 // WebSocket + API Server
 const app = express();
@@ -17,25 +14,12 @@ const rooms = new Map(); // chatId => Set<userId>
 // Heartbeat settings
 const HEARTBEAT_INTERVAL = 25000;
 
-// SSL Certificate paths (using your Let's Encrypt certificates)
-const SSL_CONFIG = {
-  key: fs.readFileSync('/etc/letsencrypt/live/autoservicely.com/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/autoservicely.com/fullchain.pem')
-};
-
-// Create HTTPS server
-const httpsServer = https.createServer(SSL_CONFIG, app);
+// Create HTTP server (بدون SSL)
+const httpServer = http.createServer(app);
 const wss = new WebSocket.Server({ 
-  server: httpsServer, 
+  server: httpServer, 
   path: '/' 
 });
-
-// Optional: Create HTTP server for redirects
-const httpApp = express();
-httpApp.use((req, res) => {
-  res.redirect(301, `https://${req.headers.host}${req.url}`);
-});
-const httpServer = http.createServer(httpApp);
 
 wss.on('connection', (socket) => {
   console.log('📥 New connection established');
@@ -163,24 +147,16 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Start HTTPS server (port 3005)
-httpsServer.listen(3005, () => {
-  console.log('🚀 HTTPS WebSocket + API server running on https://localhost:3005');
-  console.log('🔒 SSL/TLS enabled with Let\'s Encrypt certificates');
-});
-
-// Start HTTP server for redirects (port 3006)
-httpServer.listen(3006, () => {
-  console.log('🔄 HTTP redirect server running on http://localhost:3006');
+// Start HTTP server (port 3005)
+httpServer.listen(3005, () => {
+  console.log('🚀 WS + API server running on http://localhost:3005');
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\n🛑 Shutting down servers...');
-  httpsServer.close(() => {
-    httpServer.close(() => {
-      console.log('✅ Servers closed gracefully');
-      process.exit(0);
-    });
+  httpServer.close(() => {
+    console.log('✅ Server closed gracefully');
+    process.exit(0);
   });
 });
