@@ -1,23 +1,19 @@
-const fs = require('fs');
-const https = require('https');
 const express = require('express');
 const bodyParser = require('body-parser');
+const http = require('http'); // use HTTP, not HTTPS
 const WebSocket = require('ws');
 
 // Express app
 const app = express();
 app.use(bodyParser.json());
 
-// Maps
+// Maps for users and rooms
 const users = new Map(); // userId => WebSocket
 const rooms = new Map(); // chatId => Set<userId>
 const HEARTBEAT_INTERVAL = 25000;
 
-// SSL Certificates (Node يستخدم HTTPS على بورت داخلي مختلف، أو استخدم Nginx كـ reverse proxy)
-const server = https.createServer({
-  cert: fs.readFileSync('/etc/letsencrypt/live/autoservicely.com/fullchain.pem'),
-  key: fs.readFileSync('/etc/letsencrypt/live/autoservicely.com/privkey.pem')
-}, app);
+// Create plain HTTP server
+const server = http.createServer(app);
 
 // WebSocket server
 const wss = new WebSocket.Server({ server, path: '/ws' });
@@ -26,12 +22,14 @@ wss.on('connection', (socket) => {
   console.log('📥 New WS connection established');
   let currentUserId = null;
 
+  // Heartbeat ping
   const pingInterval = setInterval(() => {
     if (socket.readyState === WebSocket.OPEN) socket.ping();
   }, HEARTBEAT_INTERVAL);
 
   socket.on('pong', () => {});
 
+  // Handle incoming messages
   socket.on('message', (msg) => {
     try {
       const data = JSON.parse(msg);
@@ -61,7 +59,10 @@ wss.on('connection', (socket) => {
             if (userId !== currentUserId) {
               const target = users.get(userId);
               if (target && target.readyState === WebSocket.OPEN) {
-                target.send(JSON.stringify({ type: 'typing', data: { chatId: data.chatId, userId: currentUserId, isTyping: data.isTyping } }));
+                target.send(JSON.stringify({
+                  type: 'typing',
+                  data: { chatId: data.chatId, userId: currentUserId, isTyping: data.isTyping }
+                }));
               }
             }
           });
@@ -75,6 +76,7 @@ wss.on('connection', (socket) => {
     }
   });
 
+  // Clean up on close
   socket.on('close', () => {
     users.delete(currentUserId);
     rooms.forEach(set => set.delete(currentUserId));
@@ -109,9 +111,9 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), connections: users.size, rooms: rooms.size });
 });
 
-// Start HTTPS server (Node داخلي)
-server.listen(3005, '0.0.0.0', () => {
-  console.log('🚀 Node HTTPS + WS server running on https://127.0.0.1:3005/ws');
+// Start HTTP server
+server.listen(3005, '127.0.0.1', () => {
+  console.log('🚀 Node WS server running on http://127.0.0.1:3005/ws');
 });
 
 // Graceful shutdown
