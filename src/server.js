@@ -49,7 +49,7 @@ try {
 // WebSocket server - matching nginx path
 const wss = new WebSocket.Server({ 
   server, 
-  path: '/ws',
+  path: '/ws/',
   verifyClient: (info) => {
     // Add any authentication logic here if needed
     return true;
