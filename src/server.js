@@ -110,7 +110,7 @@ app.get('/health', (req, res) => {
 });
 
 // Start HTTPS server (Node داخلي)
-server.listen(3005, '127.0.0.1', () => {
+server.listen(3005, '0.0.0.0', () => {
   console.log('🚀 Node HTTPS + WS server running on https://127.0.0.1:3005/ws');
 });
 
