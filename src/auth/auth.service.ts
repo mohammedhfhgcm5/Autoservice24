@@ -49,7 +49,7 @@ export class AuthService {
       throw new UnauthorizedException();
     }
     const { password, ...rest } = signupBody;
-    const salt = bcrypt.genSaltSync(10);
+    const salt = bcrypt.genSaltSync(8);
     const hashPassword = bcrypt.hashSync(password, salt);
     const newUser = await this.userservice.create({
       password: hashPassword,
@@ -81,7 +81,7 @@ export class AuthService {
     const user = await this.userservice.getOneUserByEmail(dto.email);
     if (!user) throw new UnauthorizedException('User not found');
 
-    const salt = bcrypt.genSaltSync(10);
+    const salt = bcrypt.genSaltSync(8);
     const newHashedPassword = bcrypt.hashSync(dto.newPassword, salt);
 
     await this.userservice.update(user.id, { password: newHashedPassword });
