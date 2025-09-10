@@ -1,41 +1,37 @@
-// server.js
-const WebSocket = require('ws');
+const fs = require('fs');
+const https = require('https');
 const express = require('express');
 const bodyParser = require('body-parser');
-const http = require('http');
+const WebSocket = require('ws');
 
-// WebSocket + API Server
+// Express app
 const app = express();
 app.use(bodyParser.json());
 
 // Maps
 const users = new Map(); // userId => WebSocket
 const rooms = new Map(); // chatId => Set<userId>
-
-// Heartbeat settings
 const HEARTBEAT_INTERVAL = 25000;
 
-// Create HTTP server (بدون SSL)
-const httpServer = http.createServer(app);
+// SSL Certificates
+const server = https.createServer({
+  cert: fs.readFileSync('/etc/letsencrypt/live/autoservicely.com/fullchain.pem'),
+  key: fs.readFileSync('/etc/letsencrypt/live/autoservicely.com/privkey.pem')
+}, app);
 
-const wss = new WebSocket.Server({ 
-  server: httpServer, 
-  path: '/' 
-});
+// WebSocket server على نفس البورت
+const wss = new WebSocket.Server({ server, path: '/ws' });
 
 wss.on('connection', (socket) => {
   console.log('📥 New connection established');
   let currentUserId = null;
 
+  // Heartbeat
   const pingInterval = setInterval(() => {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.ping();
-    }
+    if (socket.readyState === WebSocket.OPEN) socket.ping();
   }, HEARTBEAT_INTERVAL);
 
-  socket.on('pong', () => {
-    // Alive
-  });
+  socket.on('pong', () => {});
 
   socket.on('message', (msg) => {
     try {
@@ -50,43 +46,36 @@ wss.on('connection', (socket) => {
             if (oldSocket && oldSocket !== socket) oldSocket.close();
           }
           users.set(currentUserId, socket);
-          console.log(`✅ Authenticated user ${currentUserId}`);
-
-          socket.send(
-            JSON.stringify({
-              type: 'auth-confirmation',
-              status: 'success',
-              userId: currentUserId,
-            }),
-          );
+          socket.send(JSON.stringify({
+            type: 'auth-confirmation',
+            status: 'success',
+            userId: currentUserId,
+          }));
           break;
 
         case 'joinRooms':
           if (!currentUserId) return;
-          data.chatIds.forEach((chatId) => {
+          data.chatIds.forEach(chatId => {
             if (!rooms.has(chatId)) rooms.set(chatId, new Set());
             rooms.get(chatId).add(currentUserId);
           });
-          console.log(`🚪 User ${currentUserId} joined rooms:`, data.chatIds);
           break;
 
         case 'typing':
           if (!currentUserId || !data.chatId) return;
           const room = rooms.get(data.chatId);
-          room?.forEach((userId) => {
+          room?.forEach(userId => {
             if (userId !== currentUserId) {
               const target = users.get(userId);
               if (target && target.readyState === WebSocket.OPEN) {
-                target.send(
-                  JSON.stringify({
-                    type: 'typing',
-                    data: {
-                      chatId: data.chatId,
-                      userId: currentUserId,
-                      isTyping: data.isTyping,
-                    },
-                  }),
-                );
+                target.send(JSON.stringify({
+                  type: 'typing',
+                  data: {
+                    chatId: data.chatId,
+                    userId: currentUserId,
+                    isTyping: data.isTyping
+                  }
+                }));
               }
             }
           });
@@ -101,61 +90,50 @@ wss.on('connection', (socket) => {
   });
 
   socket.on('close', () => {
-    console.log(`❌ Connection closed for user ${currentUserId}`);
     users.delete(currentUserId);
-    rooms.forEach((set) => set.delete(currentUserId));
+    rooms.forEach(set => set.delete(currentUserId));
     clearInterval(pingInterval);
   });
 });
 
-// ✅ Broadcast endpoint
+// Broadcast endpoint
 app.post('/api/broadcast', (req, res) => {
-  const message = req.body;
-  const { chatId, senderId, reciverId } = message;
-
+  const { chatId, senderId, reciverId } = req.body;
   const members = rooms.get(chatId);
-
   if (members && members.size > 0) {
-    members.forEach((userId) => {
+    members.forEach(userId => {
       const socket = users.get(userId);
       if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'newMessage', data: message }));
-        console.log(`✅ Message sent to user ${userId}`);
+        socket.send(JSON.stringify({ type: 'newMessage', data: req.body }));
       }
     });
   } else {
-    [senderId, reciverId].forEach((userId) => {
+    [senderId, reciverId].forEach(userId => {
       const socket = users.get(userId);
       if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'newMessage', data: message }));
-        console.log(`✅ [Fallback] Message sent to user ${userId}`);
+        socket.send(JSON.stringify({ type: 'newMessage', data: req.body }));
       }
     });
   }
-
   res.sendStatus(200);
 });
 
-// Health check endpoint
+// Health check
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     connections: users.size,
     rooms: rooms.size
   });
 });
 
-// Start HTTP server (port 3005, يستمع على كل الشبكات)
-httpServer.listen(3005, '0.0.0.0', () => {
-  console.log('🚀 WS + API server running on ws://0.0.0.0:3005/');
+// Start server على بورت 443 (HTTPS)
+server.listen(443, () => {
+  console.log('🚀 HTTPS + WS server running on wss://autoservicely.com/ws');
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down servers...');
-  httpServer.close(() => {
-    console.log('✅ Server closed gracefully');
-    process.exit(0);
-  });
+  server.close(() => process.exit(0));
 });
