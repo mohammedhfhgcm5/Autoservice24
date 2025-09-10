@@ -1,3 +1,4 @@
+// server.js
 const WebSocket = require('ws');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -16,6 +17,7 @@ const HEARTBEAT_INTERVAL = 25000;
 
 // Create HTTP server (بدون SSL)
 const httpServer = http.createServer(app);
+
 const wss = new WebSocket.Server({ 
   server: httpServer, 
   path: '/' 
@@ -106,7 +108,7 @@ wss.on('connection', (socket) => {
   });
 });
 
-// ✅ Broadcast endpoint from NestJS
+// ✅ Broadcast endpoint
 app.post('/api/broadcast', (req, res) => {
   const message = req.body;
   const { chatId, senderId, reciverId } = message;
@@ -122,9 +124,6 @@ app.post('/api/broadcast', (req, res) => {
       }
     });
   } else {
-    console.log(
-      `⚠️ No room found. Using fallback for users ${senderId}, ${reciverId}`,
-    );
     [senderId, reciverId].forEach((userId) => {
       const socket = users.get(userId);
       if (socket && socket.readyState === WebSocket.OPEN) {
@@ -147,9 +146,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Start HTTP server (port 3005)
-httpServer.listen(3005, () => {
-  console.log('🚀 WS + API server running on http://localhost:3005');
+// Start HTTP server (port 3005, يستمع على كل الشبكات)
+httpServer.listen(3005, '0.0.0.0', () => {
+  console.log('🚀 WS + API server running on ws://0.0.0.0:3005/');
 });
 
 // Graceful shutdown
