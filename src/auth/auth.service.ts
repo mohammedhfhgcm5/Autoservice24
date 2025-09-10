@@ -17,7 +17,7 @@ export class AuthService {
   constructor(
     private readonly userservice: UserService,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   async logIn(authBody: AuthDto) {
     const user = await this.userservice.getOneUserByEmail(authBody.email);
@@ -25,7 +25,12 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    if (!user || !bcrypt.compareSync(authBody.password, user.password!)) {
+    // Use async bcrypt.compare instead of sync
+    const isPasswordValid = await bcrypt.compare(
+      authBody.password,
+      user.password,
+    );
+    if (!user || !isPasswordValid) {
       throw new UnauthorizedException();
     }
 
@@ -34,8 +39,8 @@ export class AuthService {
       _id: user._id,
       username: user.username,
       user_type: user.user_type,
-      phone: user.phone,              // أضف هذا السطر ✅
-      profile_image: user.profile_image
+      phone: user.phone,
+      profile_image: user.profile_image,
     };
 
     return {
@@ -49,8 +54,12 @@ export class AuthService {
       throw new UnauthorizedException();
     }
     const { password, ...rest } = signupBody;
-    const salt = bcrypt.genSaltSync(16);
-    const hashPassword = bcrypt.hashSync(password, salt);
+
+    // Reduced salt rounds from 16 to 10 for better performance
+    // Use async operations instead of sync
+    const salt = await bcrypt.genSalt(10);
+    const hashPassword = await bcrypt.hash(password, salt);
+
     const newUser = await this.userservice.create({
       password: hashPassword,
       email: rest.email,
@@ -81,8 +90,9 @@ export class AuthService {
     const user = await this.userservice.getOneUserByEmail(dto.email);
     if (!user) throw new UnauthorizedException('User not found');
 
-    const salt = bcrypt.genSaltSync(16);
-    const newHashedPassword = bcrypt.hashSync(dto.newPassword, salt);
+    // Use async bcrypt operations with reduced salt rounds
+    const salt = await bcrypt.genSalt(10);
+    const newHashedPassword = await bcrypt.hash(dto.newPassword, salt);
 
     await this.userservice.update(user.id, { password: newHashedPassword });
 
@@ -92,29 +102,37 @@ export class AuthService {
     };
   }
 
+  // Add timeout and better error handling for external API calls
   async verifyGoogleToken(idToken: string, userType: string, provider: string) {
-    const res = await axios.get(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`,
-    );
-    if (!res.data || !res.data.email) throw new UnauthorizedException();
+    try {
+      const res = await axios.get(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`,
+        { timeout: 5000 }, // 5 second timeout
+      );
 
-    const user = await this.userservice.findByProvider(
-      provider,
-      res.data.sub || res.data.id,
-    );
-    if (user) {
-      return this.buildPayload(user);
-    } else {
-      const newuser = await this.userservice.create({
-        email: res.data.email,
-        username: res.data.name,
-        profile_image: res.data.picture,
-        user_type: userType,
-        provider: provider,
-        providerId: res.data.sub,
-      });
+      if (!res.data || !res.data.email) throw new UnauthorizedException();
 
-      return this.buildPayload(newuser);
+      const user = await this.userservice.findByProvider(
+        provider,
+        res.data.sub || res.data.id,
+      );
+
+      if (user) {
+        return this.buildPayload(user);
+      } else {
+        const newuser = await this.userservice.create({
+          email: res.data.email,
+          username: res.data.name,
+          profile_image: res.data.picture,
+          user_type: userType,
+          provider: provider,
+          providerId: res.data.sub,
+        });
+
+        return this.buildPayload(newuser);
+      }
+    } catch (error) {
+      throw new UnauthorizedException('Failed to verify Google token');
     }
   }
 
@@ -123,27 +141,34 @@ export class AuthService {
     userType: string,
     provider: string,
   ) {
-    const res = await axios.get(
-      `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`,
-    );
-    if (!res.data || !res.data.email) throw new UnauthorizedException();
+    try {
+      const res = await axios.get(
+        `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`,
+        { timeout: 5000 }, // 5 second timeout
+      );
 
-    const user = await this.userservice.findByProvider(
-      provider,
-      res.data.sub || res.data.id,
-    );
-    if (user) {
-      return this.buildPayload(user);
-    } else {
-      const newuser = await this.userservice.create({
-        email: res.data.email,
-        username: res.data.name,
-        profile_image: res.data.picture?.data?.url,
-        user_type: userType,
-        provider: provider,
-      });
+      if (!res.data || !res.data.email) throw new UnauthorizedException();
 
-      return this.buildPayload(newuser);
+      const user = await this.userservice.findByProvider(
+        provider,
+        res.data.sub || res.data.id,
+      );
+
+      if (user) {
+        return this.buildPayload(user);
+      } else {
+        const newuser = await this.userservice.create({
+          email: res.data.email,
+          username: res.data.name,
+          profile_image: res.data.picture?.data?.url,
+          user_type: userType,
+          provider: provider,
+        });
+
+        return this.buildPayload(newuser);
+      }
+    } catch (error) {
+      throw new UnauthorizedException('Failed to verify Facebook token');
     }
   }
 
@@ -153,19 +178,17 @@ export class AuthService {
     provider: string,
   ) {
     try {
-      const decoded: any = jwt.decode(identityToken); // decode لا تتحقق من التوقيع، الأفضل لاحقًا إضافة verify
+      const decoded: any = jwt.decode(identityToken);
 
       if (!decoded || !decoded.sub) {
         throw new UnauthorizedException('Invalid Apple token');
       }
 
-      // حاول جلب المستخدم عن طريق providerId
       const user = await this.userservice.findByProvider(provider, decoded.sub);
 
       if (user) {
         return this.buildPayload(user);
       } else {
-        // اسم المستخدم ممكن تاخذه من الـ `decoded.name` لو موجود، أو تولده عشوائيًا
         const newUser = await this.userservice.create({
           provider: provider,
           providerId: decoded.sub,
@@ -186,8 +209,8 @@ export class AuthService {
       _id: user._id,
       username: user.username,
       user_type: user.user_type,
-      phone: user.phone,              // أضف هذا السطر ✅
-      profile_image: user.profile_image
+      phone: user.phone,
+      profile_image: user.profile_image,
     };
   }
 
