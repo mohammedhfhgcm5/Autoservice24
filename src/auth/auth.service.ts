@@ -16,23 +16,27 @@ import * as jwt from 'jsonwebtoken';
 export class AuthService {
   constructor(
     private readonly userservice: UserService,
-    private readonly jwtService: JwtService,
+    private jwtService: JwtService,
   ) {}
 
-  // -------------------- LOGIN --------------------
   async logIn(authBody: AuthDto) {
     const user = await this.userservice.getOneUserByEmail(authBody.email);
-
-    if (!user || !user.password) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (!user.password) {
+      throw new UnauthorizedException();
     }
 
-    const isMatch = await bcrypt.compare(authBody.password, user.password);
-    if (!isMatch) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (!user || !bcrypt.compareSync(authBody.password, user.password!)) {
+      throw new UnauthorizedException();
     }
 
-    const payload = this.buildPayload(user);
+    const payload = {
+      email: authBody.email,
+      _id: user._id,
+      username: user.username,
+      user_type: user.user_type,
+      phone: user.phone, // أضف هذا السطر ✅
+      profile_image: user.profile_image,
+    };
 
     return {
       token: this.jwtService.sign(payload),
@@ -40,17 +44,13 @@ export class AuthService {
     };
   }
 
-  // -------------------- SIGNUP --------------------
   async signUp(signupBody: UserDto) {
     if (!signupBody.password) {
-      throw new UnauthorizedException('Password is required');
+      throw new UnauthorizedException();
     }
-
     const { password, ...rest } = signupBody;
-
-    const salt = await bcrypt.genSalt(8);
-    const hashPassword = await bcrypt.hash(password, salt);
-
+    const salt = bcrypt.genSaltSync(8);
+    const hashPassword = bcrypt.hashSync(password, salt);
     const newUser = await this.userservice.create({
       password: hashPassword,
       email: rest.email,
@@ -68,7 +68,6 @@ export class AuthService {
     };
   }
 
-  // -------------------- EDIT USER --------------------
   async editDetails(userId: string, body: EditUserDto) {
     const updatedUser = await this.userservice.update(userId, body);
     return {
@@ -78,13 +77,12 @@ export class AuthService {
     };
   }
 
-  // -------------------- FORGOT PASSWORD --------------------
   async forgotPassword(dto: ForgotPasswordDto) {
     const user = await this.userservice.getOneUserByEmail(dto.email);
     if (!user) throw new UnauthorizedException('User not found');
 
-    const salt = await bcrypt.genSalt(8);
-    const newHashedPassword = await bcrypt.hash(dto.newPassword, salt);
+    const salt = bcrypt.genSaltSync(8);
+    const newHashedPassword = bcrypt.hashSync(dto.newPassword, salt);
 
     await this.userservice.update(user.id, { password: newHashedPassword });
 
@@ -94,23 +92,20 @@ export class AuthService {
     };
   }
 
-  // -------------------- GOOGLE LOGIN --------------------
   async verifyGoogleToken(idToken: string, userType: string, provider: string) {
     const res = await axios.get(
       `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`,
     );
-
     if (!res.data || !res.data.email) throw new UnauthorizedException();
 
     const user = await this.userservice.findByProvider(
       provider,
       res.data.sub || res.data.id,
     );
-
     if (user) {
       return this.buildPayload(user);
     } else {
-      const newUser = await this.userservice.create({
+      const newuser = await this.userservice.create({
         email: res.data.email,
         username: res.data.name,
         profile_image: res.data.picture,
@@ -119,11 +114,10 @@ export class AuthService {
         providerId: res.data.sub,
       });
 
-      return this.buildPayload(newUser);
+      return this.buildPayload(newuser);
     }
   }
 
-  // -------------------- FACEBOOK LOGIN --------------------
   async verifyFacebookToken(
     accessToken: string,
     userType: string,
@@ -132,15 +126,16 @@ export class AuthService {
     const res = await axios.get(
       `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`,
     );
-
     if (!res.data || !res.data.email) throw new UnauthorizedException();
 
-    const user = await this.userservice.findByProvider(provider, res.data.id);
-
+    const user = await this.userservice.findByProvider(
+      provider,
+      res.data.sub || res.data.id,
+    );
     if (user) {
       return this.buildPayload(user);
     } else {
-      const newUser = await this.userservice.create({
+      const newuser = await this.userservice.create({
         email: res.data.email,
         username: res.data.name,
         profile_image: res.data.picture?.data?.url,
@@ -148,53 +143,54 @@ export class AuthService {
         provider: provider,
       });
 
-      return this.buildPayload(newUser);
+      return this.buildPayload(newuser);
     }
   }
 
-  // -------------------- APPLE LOGIN --------------------
   async verifyAppleToken(
     identityToken: string,
     userType: string,
     provider: string,
   ) {
     try {
-      const decoded: any = jwt.decode(identityToken); // decode does not verify signature
+      const decoded: any = jwt.decode(identityToken); // decode لا تتحقق من التوقيع، الأفضل لاحقًا إضافة verify
 
       if (!decoded || !decoded.sub) {
         throw new UnauthorizedException('Invalid Apple token');
       }
 
+      // حاول جلب المستخدم عن طريق providerId
       const user = await this.userservice.findByProvider(provider, decoded.sub);
 
-      if (user) return this.buildPayload(user);
+      if (user) {
+        return this.buildPayload(user);
+      } else {
+        // اسم المستخدم ممكن تاخذه من الـ `decoded.name` لو موجود، أو تولده عشوائيًا
+        const newUser = await this.userservice.create({
+          provider: provider,
+          providerId: decoded.sub,
+          username: 'Apple User ' + Math.floor(Math.random() * 10000),
+          user_type: userType,
+        });
 
-      const newUser = await this.userservice.create({
-        provider: provider,
-        providerId: decoded.sub,
-        username: 'Apple User ' + Math.floor(Math.random() * 10000),
-        user_type: userType,
-      });
-
-      return this.buildPayload(newUser);
+        return this.buildPayload(newUser);
+      }
     } catch (error) {
       throw new UnauthorizedException('Failed to verify Apple token');
     }
   }
 
-  // -------------------- BUILD PAYLOAD --------------------
   private buildPayload(user: any) {
     return {
       email: user.email,
       _id: user._id,
       username: user.username,
       user_type: user.user_type,
-      phone: user.phone,
+      phone: user.phone, // أضف هذا السطر ✅
       profile_image: user.profile_image,
     };
   }
 
-  // -------------------- GENERATE JWT --------------------
   async generateJwt(userpayload: PayloadDto) {
     return this.jwtService.sign(userpayload);
   }
