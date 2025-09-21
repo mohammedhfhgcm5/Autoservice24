@@ -258,25 +258,5 @@ async verifyEmail(token: string) {
     return this.jwtService.sign(userpayload);
   }
 
-  async  testEmail() {
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, 
-    auth: {
-      user: 'hfhgcm5@gmail.com',
-      pass: 'tedhfizvoklwhnlz', 
-    },
-  });
-
-  const info = await transporter.sendMail({
-    from: '"Test" <hfhgcm5@gmail.com>',
-    to: 'beshersawas2@gmail.com',
-    subject: 'SMTP Test',
-    text: 'Hello world!',
-  });
-
-  console.log('Message sent:', info.messageId);
-}
 
 }

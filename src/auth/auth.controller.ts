@@ -22,10 +22,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
 
-  @Post('test')
-  test(){
-    return this.authService.testEmail();
-  }
+ 
 
   @Post('signin') // Now: POST /auth/signin
   signin(@Body() authBody: AuthDto) {
