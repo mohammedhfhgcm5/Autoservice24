@@ -34,7 +34,7 @@ export class MessagesController {
         },
       }),
       fileFilter: (req, file, callback) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+        if (!file.mimetype.match(/^image\//)) {
           return callback(
             new Error('Only JPG/PNG image files are allowed!'),
             false,

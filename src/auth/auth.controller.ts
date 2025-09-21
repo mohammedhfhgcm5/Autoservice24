@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Param,
   Post,
   Put,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -18,6 +20,12 @@ import { extname } from 'path';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+
+  @Post('test')
+  test(){
+    return this.authService.testEmail();
+  }
 
   @Post('signin') // Now: POST /auth/signin
   signin(@Body() authBody: AuthDto) {
@@ -37,7 +45,7 @@ export class AuthController {
         },
       }),
       fileFilter: (req, file, callback) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+        if (!file.mimetype.match(/^image\//)) {
           return callback(new Error('Only image files are allowed!'), false);
         }
         callback(null, true);
@@ -51,13 +59,21 @@ export class AuthController {
     // image path saved in DB
     const imagePath = file ? `/uploads/users/${file.filename}` : undefined;
 
-    console.log('Uploaded file:', file); // check file info
 
     return this.authService.signUp({
       ...signupBody,
       profile_image: imagePath,
     });
   }
+
+
+   @Get('verify-email')
+  async verifyEmail(@Query('token') token:string) {
+    return this.authService.verifyEmail(token);
+  }
+
+
+
 
   @Put('edit/:id')
  @UseInterceptors(
@@ -72,7 +88,7 @@ export class AuthController {
         },
       }),
       fileFilter: (req, file, callback) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+        if (!file.mimetype.match(/^image\//)) {
           return callback(new Error('Only image files are allowed!'), false);
         }
         callback(null, true);
@@ -145,4 +161,7 @@ export class AuthController {
     const jwt = await this.authService.generateJwt(userInfo);
     return { token: jwt, user: userInfo };
   }
+
+
+
 }

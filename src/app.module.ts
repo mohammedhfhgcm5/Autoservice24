@@ -11,9 +11,11 @@ import { ChatModule } from './chat/chat.module';
 import { MessagesModule } from './message/message.module';
 import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
-
+import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
+
+     ConfigModule.forRoot({ isGlobal: true, envFilePath:'.env'}),
     // 👇 Enables static serving for uploaded files
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),

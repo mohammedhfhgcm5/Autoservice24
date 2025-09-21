@@ -1,4 +1,4 @@
-import {  IsEmail, IsIn, IsString } from 'class-validator';
+import {  IsBoolean, IsEmail, IsIn, IsString } from 'class-validator';
 
 export class UserDto {
   @IsString()
@@ -23,6 +23,16 @@ export class UserDto {
   
     @IsString() // مثال: sub من Google أو id من Facebook
     providerId?: string;
+
+
+
+    @IsBoolean()
+    verified?: boolean;
+
+    @IsString()
+    verificationToken?:string;
+
+    
 }
 
 

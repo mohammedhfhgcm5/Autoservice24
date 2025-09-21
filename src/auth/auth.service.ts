@@ -11,6 +11,7 @@ import { UserService } from 'src/user/user.service';
 import { UserDto } from 'src/user/dto/user.dto';
 import axios from 'axios';
 import * as jwt from 'jsonwebtoken';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class AuthService {
@@ -24,8 +25,11 @@ export class AuthService {
     if (!user.password) {
       throw new UnauthorizedException();
     }
+    if (!user.verified) {
+  throw new UnauthorizedException('Please verify your email before logging in');
+}
 
-    if (!user || !bcrypt.compareSync(authBody.password, user.password!)) {
+    if ( !bcrypt.compareSync(authBody.password, user.password!)) {
       throw new UnauthorizedException();
     }
 
@@ -53,13 +57,22 @@ export class AuthService {
     const hashPassword = bcrypt.hashSync(password, salt);
     const newUser = await this.userservice.create({
       password: hashPassword,
-      email: rest.email,
-      username: rest.username,
-      phone: rest.phone,
-      profile_image: rest.profile_image,
-      user_type: rest.user_type,
+     ...rest,
       provider: 'local',
+      verified:false
+
     });
+
+     const verificationToken = this.jwtService.sign(
+    { email: rest.email },
+    {
+      secret: process.env.JWT_VERIFICATION_SECRET,
+      expiresIn: '1d',
+    },
+  );
+
+
+     await this.sendVerificationEmail(rest.email!, verificationToken);
 
     return {
       status: true,
@@ -67,6 +80,53 @@ export class AuthService {
       user: newUser,
     };
   }
+
+
+
+  //send email varifay 
+  private async sendVerificationEmail(email: string, token: string) {
+  const verifyUrl = `${process.env.FRONTEND_URL}/auth/verify-email?token=${token}`;
+
+  
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.MAIL_USER,
+      pass: process.env.MAIL_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: `"MyApp" <${process.env.MAIL_USER}>`,
+    to: email,
+    subject: 'Verify your email',
+    html: `<p>Please click this link to verify your email:</p>
+           <a href="${verifyUrl}">${verifyUrl}</a>`,
+  });
+}
+
+async verifyEmail(token: string) {
+  try {
+    const payload = this.jwtService.verify(token, {
+      secret: process.env.JWT_VERIFICATION_SECRET,
+    });
+
+    const user = await this.userservice.getOneUserByEmail(payload.email);
+    if (!user) throw new UnauthorizedException('Invalid token');
+
+
+    const updatedUser = await this.userservice.update(user._id as string, {verified:true , verificationToken:undefined});
+
+
+
+    await user.save();
+
+    return { status: true, message: 'Email verified successfully' };
+  } catch (e) {
+    throw new UnauthorizedException('Invalid or expired verification token');
+  }
+}
 
   async editDetails(userId: string, body: EditUserDto) {
     const updatedUser = await this.userservice.update(userId, body);
@@ -112,6 +172,7 @@ export class AuthService {
         user_type: userType,
         provider: provider,
         providerId: res.data.sub,
+        verified: true,
       });
 
       return this.buildPayload(newuser);
@@ -141,6 +202,7 @@ export class AuthService {
         profile_image: res.data.picture?.data?.url,
         user_type: userType,
         provider: provider,
+        verified: true
       });
 
       return this.buildPayload(newuser);
@@ -171,6 +233,7 @@ export class AuthService {
           providerId: decoded.sub,
           username: 'Apple User ' + Math.floor(Math.random() * 10000),
           user_type: userType,
+          verified:true
         });
 
         return this.buildPayload(newUser);
@@ -194,4 +257,26 @@ export class AuthService {
   async generateJwt(userpayload: PayloadDto) {
     return this.jwtService.sign(userpayload);
   }
+
+  async  testEmail() {
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, 
+    auth: {
+      user: 'hfhgcm5@gmail.com',
+      pass: 'tedhfizvoklwhnlz', 
+    },
+  });
+
+  const info = await transporter.sendMail({
+    from: '"Test" <hfhgcm5@gmail.com>',
+    to: 'beshersawas2@gmail.com',
+    subject: 'SMTP Test',
+    text: 'Hello world!',
+  });
+
+  console.log('Message sent:', info.messageId);
+}
+
 }

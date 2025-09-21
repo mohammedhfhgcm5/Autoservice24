@@ -16,16 +16,24 @@ export class User extends Document {
   user_type: string;
 
   @Prop()
-  phone?: string;
+  phone: string;
 
   @Prop()
   profile_image?: string;
 
-  @Prop({ default: 'local', enum: ['local', 'google', 'facebook', 'apple'] })
+  @Prop({ default: 'local', enum: ['local', 'google', 'facebook', 'apple'] ,required : true})
   provider: string;
 
   @Prop() // مثال: sub من Google أو id من Facebook
-  providerId?: string;
+  providerId: string;
+
+  @Prop({required : true})
+  verified: false;
+
+  @Prop()
+  verificationToken:string;
+
+  
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
