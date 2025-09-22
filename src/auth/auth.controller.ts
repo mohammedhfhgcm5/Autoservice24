@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   Query,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { UserDto } from 'src/user/dto/user.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -65,10 +67,61 @@ export class AuthController {
 
 
    @Get('verify-email')
-  async verifyEmail(@Query('token') token:string) {
-    return this.authService.verifyEmail(token);
+   async verifyEmail(@Query('token') token: string, @Res() res: Response) {
+    try {
+      const result = await this.authService.verifyEmail(token);
+      
+      // Set content type to HTML and send the HTML content
+      res.setHeader('Content-Type', 'text/html');
+      res.send(result.message);
+    } catch (error) {
+      // Return error HTML page
+      res.setHeader('Content-Type', 'text/html');
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Email Verification Failed</title>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f7fa;">
+          <div style="
+            text-align: center;
+            padding: 40px;
+            background-color: #ffe6e6;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: 50px auto;
+          ">
+            <h1 style="color: #d32f2f;">❌ Verification Failed</h1>
+            <p style="color: #666; font-size: 16px;">Invalid or expired verification token</p>
+          
+          </div>
+        </body>
+        </html>
+      `);
+    }
   }
 
+
+
+   @Post('sendforgotPassword')
+  async sendforgotPassword(@Body('email') email: string) {
+    return this.authService.sendforgotPassword(email);
+  }
+
+   @Post('verify-reset')
+  async verifyReset(@Body() body: { email: string; code: string }) {
+    return this.authService.verifyReset(body.email, body.code);
+  }
+
+
+ @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
 
 
 
@@ -104,10 +157,7 @@ export class AuthController {
     });
   }
 
-  @Post('forgot-password')
-  forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto);
-  }
+ 
   @Post('google')
   async googleLogin(
     @Body() signUpbody: { idToken: string; usertype: string; provider: string },

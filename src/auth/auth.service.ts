@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import {
   AuthDto,
   EditUserDto,
@@ -12,13 +12,35 @@ import { UserDto } from 'src/user/dto/user.dto';
 import axios from 'axios';
 import * as jwt from 'jsonwebtoken';
 import * as nodemailer from 'nodemailer';
+import { InjectModel } from '@nestjs/mongoose';
+import { PasswordReset } from './schema/PasswordReset.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class AuthService {
+
+
+  private transporter;
   constructor(
     private readonly userservice: UserService,
     private jwtService: JwtService,
-  ) {}
+     @InjectModel(PasswordReset.name) private resetModel: Model<PasswordReset>,
+  ) {
+
+
+     // تهيئة الإيميل مباشرة هنا
+    this.transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS, // ⚠️ لازم App Password
+      },
+    });
+  }
+
+
 
   async logIn(authBody: AuthDto) {
     const user = await this.userservice.getOneUserByEmail(authBody.email);
@@ -87,23 +109,49 @@ export class AuthService {
   private async sendVerificationEmail(email: string, token: string) {
   const verifyUrl = `${process.env.FRONTEND_URL}/auth/verify-email?token=${token}`;
 
-  
+  this.transporter.sendMail({
+  from: `"Auto Service 24" <no-reply@autoservice24.com>`,
+  to: email,
+  subject: 'Verify your email - Auto Service 24',
+  html: `
+  <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+    <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      
+      <!-- Header -->
+      <div style="background: #0d6efd; padding: 20px; text-align: center; color: #fff;">
+        <h1 style="margin: 0; font-size: 24px;">Auto Service 24</h1>
+      </div>
+      
+      <!-- Body -->
+      <div style="padding: 30px; color: #333;">
+        <h2 style="margin-top: 0;">Verify your email</h2>
+        <p style="font-size: 16px; line-height: 1.5;">
+          Hi there 👋, <br><br>
+          Thank you for registering with <b>Auto Service 24</b>.  
+          Please confirm your email address by clicking the button below:
+        </p>
 
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.MAIL_USER,
-      pass: process.env.MAIL_PASS,
-    },
-  });
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verifyUrl}" style="background: #0d6efd; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold;">
+            Verify Email
+          </a>
+        </div>
 
-  await transporter.sendMail({
-    from: `"MyApp" <${process.env.MAIL_USER}>`,
-    to: email,
-    subject: 'Verify your email',
-    html: `<p>Please click this link to verify your email:</p>
-           <a href="${verifyUrl}">${verifyUrl}</a>`,
-  });
+        <p style="font-size: 14px; color: #555;">
+          Or copy and paste this link in your browser: <br>
+          <a href="${verifyUrl}" style="color: #0d6efd;">${verifyUrl}</a>
+        </p>
+      </div>
+      
+      <!-- Footer -->
+      <div style="background: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #888;">
+        © ${new Date().getFullYear()} Auto Service 24. All rights reserved.
+      </div>
+    </div>
+  </div>
+  `
+});
+
 }
 
 async verifyEmail(token: string) {
@@ -111,18 +159,48 @@ async verifyEmail(token: string) {
     const payload = this.jwtService.verify(token, {
       secret: process.env.JWT_VERIFICATION_SECRET,
     });
-
+    
     const user = await this.userservice.getOneUserByEmail(payload.email);
     if (!user) throw new UnauthorizedException('Invalid token');
+    
+    const updatedUser = await this.userservice.update(user._id as string, {
+      verified: true, 
+      verificationToken: undefined
+    });
 
+    // Remove this line since updatedUser already contains the saved data
+    // await user.save();
 
-    const updatedUser = await this.userservice.update(user._id as string, {verified:true , verificationToken:undefined});
-
-
-
-    await user.save();
-
-    return { status: true, message: 'Email verified successfully' };
+    return {
+      status: true,
+      message: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Email Verified Successfully</title>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f7fa;">
+          <div style="
+            text-align: center;
+            padding: 40px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: 50px auto;
+          ">
+            <h1 style="color: #261FB3;">✅ Email Verified!</h1>
+            <p style="color: #333; font-size: 16px; margin: 20px 0;">
+              Your email has been successfully verified. Thank you for confirming your account.
+            </p>
+            
+          </div>
+        </body>
+        </html>
+      `
+    };
   } catch (e) {
     throw new UnauthorizedException('Invalid or expired verification token');
   }
@@ -137,6 +215,70 @@ async verifyEmail(token: string) {
     };
   }
 
+
+
+
+  ///
+
+  async sendforgotPassword(email: string) {
+
+
+    const user = await this.userservice.getOneUserByEmail( email );
+    if (!user) throw new BadRequestException('user not found');
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await this.resetModel.create({
+      email,
+      code,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+    });
+
+    await this.transporter.sendMail({
+  from: `"Auto Service 24" `, ////
+  to: email,
+  subject: '🔑 Password recovery code',
+  html: `
+    <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+      <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        
+        <h2 style="color: #4CAF50; text-align: center;">Recover password</h2>
+        <p style="font-size: 16px; color: #333;">Hello </p>
+        <p style="font-size: 16px; color: #333;">
+          You have requested to recover your password. Enter the following code in the app to complete the process:
+        </p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <span style="font-size: 28px; font-weight: bold; color: #4CAF50; letter-spacing: 4px;">
+            ${code}
+          </span>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+         ⚠️ If you did not request a password recovery, you can ignore this email.
+        </p>
+
+        <p style="font-size: 14px; color: #999; text-align: center; margin-top: 30px;">
+          © ${new Date().getFullYear()} Auto Service 24 All rights reserved..
+        </p>
+      </div>
+    </div>
+  `
+});
+
+    return { message: 'the code send Successfully' };
+  }
+
+
+  async verifyReset(email: string, code: string) {
+    const reset = await this.resetModel.findOne({ email, code, used: false }).sort({ createdAt: -1 });
+
+    if (!reset) throw new BadRequestException('Invalid code');
+    if (reset.expiresAt < new Date()) throw new BadRequestException('The token has expired');
+
+    return { message: 'code is true ' };
+  }
+
   async forgotPassword(dto: ForgotPasswordDto) {
     const user = await this.userservice.getOneUserByEmail(dto.email);
     if (!user) throw new UnauthorizedException('User not found');
@@ -145,6 +287,9 @@ async verifyEmail(token: string) {
     const newHashedPassword = bcrypt.hashSync(dto.newPassword, salt);
 
     await this.userservice.update(user.id, { password: newHashedPassword });
+
+    
+    await this.resetModel.updateMany({ email : dto.email, used: false }, { used: true });
 
     return {
       status: true,
