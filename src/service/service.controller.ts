@@ -9,6 +9,8 @@ import {
   Query,
   UploadedFiles,
   UseInterceptors,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -116,5 +118,12 @@ export class ServiceController {
       (file) => `/uploads/services/${file.filename}`,
     );
     return this.serviceService.addImages(id, imagePaths);
+  }
+
+   @Get(':id/owner-phone')
+  @HttpCode(HttpStatus.OK)
+  async getOwnerPhone(@Param('id') id: string) {
+    const result = await this.serviceService.getWorkshopOwnerPhoneByServiceId(id);
+    return result;
   }
 }
