@@ -353,10 +353,15 @@ async verifyEmail(token: string) {
     const res = await axios.get(url);
     
     console.log('✅ Facebook API Response:', res.data);
+    console.log("✅ id is ", res.data.id)
+
+
     
     if (!res.data || res.data.id) {
-      console.error('❌ No email in Facebook response:', res.data);
-      throw new UnauthorizedException('Email not provided by Facebook');
+
+      
+      console.error('❌ No id in Facebook response:', res.data);
+      throw new UnauthorizedException('id not provided by Facebook');
     }
 
     const user = await this.userservice.findByProvider(
