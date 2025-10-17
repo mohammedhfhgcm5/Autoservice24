@@ -354,7 +354,7 @@ async verifyEmail(token: string) {
     
     console.log('✅ Facebook API Response:', res.data);
     
-    if (!res.data || !res.data.email) {
+    if (!res.data || res.data.id) {
       console.error('❌ No email in Facebook response:', res.data);
       throw new UnauthorizedException('Email not provided by Facebook');
     }
@@ -375,6 +375,7 @@ async verifyEmail(token: string) {
         profile_image: res.data.picture?.data?.url,
         user_type: userType,
         provider: provider,
+        providerId: res.data.id,
         verified: true
       });
       console.log('✅ New user created:', newuser.email);
