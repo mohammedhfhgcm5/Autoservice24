@@ -374,8 +374,10 @@ async verifyEmail(token: string) {
       return this.buildPayload(user);
     } else {
       console.log('🆕 Creating new user...');
+
+      const email = res.data.email || `${res.data.id}@facebook.local`;
       const newuser = await this.userservice.create({
-        email: res.data.email,
+        email: email,
         username: res.data.name,
         profile_image: res.data.picture?.data?.url,
         user_type: userType,
