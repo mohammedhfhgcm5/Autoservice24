@@ -324,23 +324,51 @@ async verifyEmail(token: string) {
     }
   }
 
-  async verifyFacebookToken(
-    accessToken: string,
-    userType: string,
-    provider: string,
-  ) {
-    const res = await axios.get(
-      `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`,
-    );
-    if (!res.data || !res.data.email) throw new UnauthorizedException();
+ async verifyFacebookToken(
+  accessToken: string,
+  userType: string,
+  provider: string,
+) {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🔵 verifyFacebookToken called');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('accessToken received:', accessToken);
+  console.log('accessToken type:', typeof accessToken);
+  console.log('accessToken length:', accessToken?.length);
+  console.log('accessToken first 30 chars:', accessToken?.substring(0, 30));
+  console.log('userType:', userType);
+  console.log('provider:', provider);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  if (!accessToken || accessToken === 'undefined' || accessToken === 'null') {
+    console.error('❌ Access token is invalid:', accessToken);
+    throw new BadRequestException('Access token is required');
+  }
+
+  const url = `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`;
+  console.log('📤 Calling Facebook API...');
+  console.log('URL:', url.replace(accessToken, accessToken.substring(0, 20) + '...'));
+
+  try {
+    const res = await axios.get(url);
+    
+    console.log('✅ Facebook API Response:', res.data);
+    
+    if (!res.data || !res.data.email) {
+      console.error('❌ No email in Facebook response:', res.data);
+      throw new UnauthorizedException('Email not provided by Facebook');
+    }
 
     const user = await this.userservice.findByProvider(
       provider,
       res.data.sub || res.data.id,
     );
+
     if (user) {
+      console.log('✅ Existing user found:', user.email);
       return this.buildPayload(user);
     } else {
+      console.log('🆕 Creating new user...');
       const newuser = await this.userservice.create({
         email: res.data.email,
         username: res.data.name,
@@ -349,10 +377,14 @@ async verifyEmail(token: string) {
         provider: provider,
         verified: true
       });
-
+      console.log('✅ New user created:', newuser.email);
       return this.buildPayload(newuser);
     }
+  } catch (error) {
+    console.error('❌ Facebook API Error:', error.response?.data || error.message);
+    throw new UnauthorizedException('Invalid Facebook token');
   }
+}
 
   async verifyAppleToken(
     identityToken: string,

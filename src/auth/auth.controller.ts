@@ -171,43 +171,47 @@ export class AuthController {
     return { token: jwt, user: userData };
   }
 
-  @Post('social-login')
-  async socialLogin(
-    @Body() signUpbody: { Token: string; usertype: string; provider: string },
-  ) {
-    const { provider, Token, usertype } = signUpbody;
+@Post('social-login')
+async socialLogin(
+  @Body() signUpbody: { Token: string; usertype: string; provider: string },
+) {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('📥 Social Login Request Received');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('Raw body:', signUpbody);
+  console.log('Provider:', signUpbody.provider);
+  console.log('Token exists:', !!signUpbody.Token);
+  console.log('Token value:', signUpbody.Token);
+  console.log('Token type:', typeof signUpbody.Token);
+  console.log('Usertype:', signUpbody.usertype);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    let userInfo: PayloadDto;
+  const { provider, Token, usertype } = signUpbody;
 
-    switch (provider) {
-      case 'google':
-        userInfo = await this.authService.verifyGoogleToken(
-          Token,
-          usertype,
-          provider,
-        );
-        break;
-      case 'facebook':
-        userInfo = await this.authService.verifyFacebookToken(
-          Token,
-          usertype,
-          provider,
-        );
-        break;
-      case 'apple':
-        userInfo = await this.authService.verifyAppleToken(
-          Token,
-          usertype,
-          provider,
-        );
-        break;
-      default:
-        throw new BadRequestException('Unsupported provider');
-    }
-
-    const jwt = await this.authService.generateJwt(userInfo);
-    return { token: jwt, user: userInfo };
+  if (!Token || Token === 'undefined' || Token === 'null') {
+    console.error('❌ Token is invalid:', Token);
+    throw new BadRequestException('Access token is missing or invalid');
   }
+
+  let userInfo: PayloadDto;
+  switch (provider) {
+    case 'google':
+      userInfo = await this.authService.verifyGoogleToken(Token, usertype, provider);
+      break;
+    case 'facebook':
+      console.log('🔵 Calling verifyFacebookToken with token:', Token.substring(0, 20) + '...');
+      userInfo = await this.authService.verifyFacebookToken(Token, usertype, provider);
+      break;
+    case 'apple':
+      userInfo = await this.authService.verifyAppleToken(Token, usertype, provider);
+      break;
+    default:
+      throw new BadRequestException('Unsupported provider');
+  }
+
+  const jwt = await this.authService.generateJwt(userInfo);
+  return { token: jwt, user: userInfo };
+}
 
 
 
