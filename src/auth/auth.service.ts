@@ -357,7 +357,7 @@ async verifyEmail(token: string) {
 
 
     
-    if (!res.data || res.data.id) {
+    if (res.data.id) {
 
       
       console.error('❌ No id in Facebook response:', res.data);
