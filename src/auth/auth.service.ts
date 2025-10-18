@@ -15,6 +15,7 @@ import * as nodemailer from 'nodemailer';
 import { InjectModel } from '@nestjs/mongoose';
 import { PasswordReset } from './schema/PasswordReset.schema';
 import { Model } from 'mongoose';
+import { importJWK, jwtVerify } from 'jose';
 
 @Injectable()
 export class AuthService {
@@ -394,36 +395,34 @@ async verifyEmail(token: string) {
   }
 }
 
-  async verifyAppleToken(
-    identityToken: string,
-    userType: string,
-    provider: string,
-  ) {
+   // --- الدالة الرئيسية للتحقق وإنشاء/جلب المستخدم
+  async verifyAppleToken(identityToken: string, userType: string, provider: string) {
     try {
-      const decoded: any = jwt.decode(identityToken); // decode لا تتحقق من التوقيع، الأفضل لاحقًا إضافة verify
+      const clientId = 'com.example.autoservice24.service'; // ضع هنا Service ID الخاص بك
+      const payload: any = await this.verifyAppleIdentityToken(identityToken, clientId);
 
-      if (!decoded || !decoded.sub) {
+      if (!payload || !payload.sub) {
         throw new UnauthorizedException('Invalid Apple token');
       }
 
-      // حاول جلب المستخدم عن طريق providerId
-      const user = await this.userservice.findByProvider(provider, decoded.sub);
+      let user = await this.userservice.findByProvider(provider, payload.sub);
 
-      if (user) {
-        return this.buildPayload(user);
-      } else {
-        // اسم المستخدم ممكن تاخذه من الـ `decoded.name` لو موجود، أو تولده عشوائيًا
-        const newUser = await this.userservice.create({
-          provider: provider,
-          providerId: decoded.sub,
-          username: 'Apple User ' + Math.floor(Math.random() * 10000),
+      if (!user) {
+        user = await this.userservice.create({
+          provider,
+          providerId: payload.sub,
+          username: payload.email
+            ? payload.email.split('@')[0]
+            : 'AppleUser' + Math.floor(Math.random() * 10000),
           user_type: userType,
-          verified:true
+          email: payload.email,
+          verified: true,
         });
-
-        return this.buildPayload(newUser);
       }
+
+      return this.buildPayload(user);
     } catch (error) {
+      console.error('Apple verification error:', error);
       throw new UnauthorizedException('Failed to verify Apple token');
     }
   }
@@ -439,9 +438,38 @@ async verifyEmail(token: string) {
     };
   }
 
+
+  
+
   async generateJwt(userpayload: PayloadDto) {
     return this.jwtService.sign(userpayload);
   }
 
+   // --- جلب مفاتيح Apple العامة باستخدام axios
+  private async getAppleKeys() {
+    const res = await axios.get('https://appleid.apple.com/auth/keys');
+    return res.data.keys;
+  }
+
+
+   // --- التحقق من identityToken
+  private async verifyAppleIdentityToken(identityToken: string, clientId: string) {
+    const appleKeys = await this.getAppleKeys();
+
+    for (const key of appleKeys) {
+      try {
+        const publicKey = await importJWK(key, 'RS256');
+        const { payload } = await jwtVerify(identityToken, publicKey, {
+          issuer: 'https://appleid.apple.com',
+          audience: clientId,
+        });
+        return payload;
+      } catch {
+        continue; // جرب المفتاح التالي
+      }
+    }
+
+    throw new UnauthorizedException('Invalid Apple identity token');
+  }
 
 }
