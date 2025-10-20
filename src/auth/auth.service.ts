@@ -398,7 +398,7 @@ async verifyEmail(token: string) {
    // --- الدالة الرئيسية للتحقق وإنشاء/جلب المستخدم
   async verifyAppleToken(identityToken: string, userType: string, provider: string) {
     try {
-      const clientId = 'com.example.autoservice24.service'; // ضع هنا Service ID الخاص بك
+      const clientId = 'com.autoservicely.app.service'; // ضع هنا Service ID الخاص بك
       const payload: any = await this.verifyAppleIdentityToken(identityToken, clientId);
 
       if (!payload || !payload.sub) {
@@ -408,7 +408,7 @@ async verifyEmail(token: string) {
       let user = await this.userservice.findByProvider(provider, payload.sub);
 
       if (!user) {
-        user = await this.userservice.create({
+        user = await this.userservice.create({  
           provider,
           providerId: payload.sub,
           username: payload.email

@@ -112,8 +112,8 @@ app.get('/health', (req, res) => {
 });
 
 // Start HTTP server
-server.listen(3005, '127.0.0.1', () => {
-  console.log('🚀 Node WS server running on http://127.0.0.1:3005/ws');
+server.listen(3005, '0.0.0.0', () => {
+  console.log('🚀 Node WS server running on http://0.0.0.0:3005/ws');
 });
 
 // Graceful shutdown
