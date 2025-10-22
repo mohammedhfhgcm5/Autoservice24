@@ -55,9 +55,16 @@ export class ServiceController {
     return this.serviceService.create(dto);
   }
 
-  @Get('findallservice')
-  findAll(@Query('serviceType') serviceType?: ServiceType) {
-    return this.serviceService.findAll(serviceType);
+   @Get()
+  async getAll(
+    @Query('serviceType') serviceType?: ServiceType,
+    @Query('skip') skip = '0',
+    @Query('limit') limit = '10',
+  ) {
+    const skipNum = parseInt(skip, 10);
+    const limitNum = parseInt(limit, 10);
+
+    return this.serviceService.findAll(serviceType, skipNum, limitNum);
   }
 
   @Get('search')

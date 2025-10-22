@@ -19,9 +19,25 @@ export class ServiceService {
     return newService.save();
   }
 
-  async findAll(serviceType?: ServiceType): Promise<Service[]> {
+ async findAll(
+    serviceType?: ServiceType,
+    skip = 0,
+    limit = 10,
+  ): Promise<{ data: Service[]; total: number }> {
     const filter = serviceType ? { service_type: serviceType } : {};
-    return this.serviceModel.find(filter).populate('workshop_id').lean().exec();
+
+    const [data, total] = await Promise.all([
+      this.serviceModel
+        .find(filter)
+        .populate('workshop_id')
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec(),
+      this.serviceModel.countDocuments(filter),
+    ]);
+
+    return { data, total };
   }
 
   async search(query: string, serviceType?: ServiceType): Promise<Service[]> {
