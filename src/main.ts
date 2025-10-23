@@ -11,6 +11,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
  app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
   await app.listen(process.env.PORT ?? 8000);
+
+  console.log(`Server is running on http://localhost:${process.env.PORT ?? 8000} fix upload`);
 }
 bootstrap();
 //2BrnIvhBYEPPYWWk
