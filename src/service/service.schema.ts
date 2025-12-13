@@ -15,6 +15,8 @@ export enum ServiceType {
   WHEEL_ALIGNMENT = 'Adjust wheel alignment',
   POLISH = 'Polish',
   CHANGE_BRAKE_FLUID = 'Change brake fluid',
+  TIRR_STORAGE = 'Tire storage'
+
 }
 
 @Schema({ timestamps: true })
